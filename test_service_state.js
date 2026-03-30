@@ -1,0 +1,31 @@
+async function runTest() {
+  const baseUrl = 'http://127.0.0.1:3001/api';
+  
+  try {
+    // 1. Login as Admin
+    console.log('Logging in as Admin...');
+    let res = await fetch(`${baseUrl}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'admin@logisticsworld.com', password: 'admin123' })
+    });
+    let data = await res.json();
+    const adminToken = data.token;
+    
+    // 2. Change state of service 3
+    console.log('Changing state of Service #3...');
+    res = await fetch(`${baseUrl}/servicios/3/estado`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+      body: JSON.stringify({ nuevoEstado: 'EN_PREPARACION', nota: 'Nota de prueba' })
+    });
+    data = await res.json();
+    console.log('Response status:', res.status);
+    console.log('Result:', data);
+
+  } catch (error) {
+    console.error('❌ TEST FAILED:', error.message);
+  }
+}
+
+runTest();
