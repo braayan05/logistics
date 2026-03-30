@@ -1,0 +1,309 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id            Int       @id @default(autoincrement())
+  email         String    @unique
+  password      String
+  nombre        String
+  apellido      String
+  tipoDocumento String    @map("tipo_documento")
+  documento     String    @unique
+  telefono      String?
+  rol           Rol       @default(CLIENTE_B2C)
+  empresa       String?
+  activo        Boolean   @default(true)
+  creadoEn      DateTime  @default(now()) @map("creado_en")
+  actualizadoEn DateTime  @updatedAt @map("actualizado_en")
+  cotizaciones  Cotizacion[]
+  servicios     Servicio[]
+  facturas      Factura[]
+  tickets       Ticket[]
+  mensajesTicket MensajeTicket[]
+
+  @@map("usuarios")
+}
+
+enum Rol {
+  CLIENTE_B2B
+  CLIENTE_B2C
+  OPERADOR
+  ADMIN
+}
+
+model Cotizacion {
+  id              Int       @id @default(autoincrement())
+  numero          String    @unique
+  usuarioId       Int       @map("usuario_id")
+  usuario         Usuario   @relation(fields: [usuarioId], references: [id])
+  tipoServicio    String    @map("tipo_servicio")
+  origen          String
+  destino         String
+  peso            Float?
+  volumen         Float?
+  descripcion     String?
+  urgencia        String    @default("normal")
+  precioCalculado Float     @map("precio_calculado")
+  estado          EstadoCotizacion @default(PENDIENTE)
+  creadoEn        DateTime  @default(now()) @map("creado_en")
+  actualizadoEn   DateTime  @updatedAt @map("actualizado_en")
+  servicio        Servicio?
+
+  @@map("cotizaciones")
+}
+
+enum EstadoCotizacion {
+  PENDIENTE
+  ACEPTADA
+  RECHAZADA
+  VENCIDA
+}
+
+model Servicio {
+  id            Int       @id @default(autoincrement())
+  numero        String    @unique
+  cotizacionId  Int       @unique @map("cotizacion_id")
+  cotizacion    Cotizacion @relation(fields: [cotizacionId], references: [id])
+  usuarioId     Int       @map("usuario_id")
+  usuario       Usuario   @relation(fields: [usuarioId], references: [id])
+  estado        EstadoServicio @default(CONTRATADO)
+  creadoEn      DateTime  @default(now()) @map("creado_en")
+  actualizadoEn DateTime  @updatedAt @map("actualizado_en")
+  cambiosEstado CambioEstado[]
+  factura       Factura?
+  ubicacionesGPS UbicacionGPS[]
+
+  @@map("servicios")
+}
+
+enum EstadoServicio {
+  SOLICITADO
+  COTIZADO
+  CONTRATADO
+  EN_PREPARACION
+  EN_TRANSITO
+  ENTREGADO
+  FACTURADO
+  CERRADO
+  INCIDENCIA
+  RECHAZADO
+  
+  // Estados de Almacenamiento
+  LLEGADA_A_BODEGA
+  PENDIENTE_ALMACENAR
+  ALMACENADA
+  EN_INVENTARIO
+  DESPACHADA
+}
+
+model CambioEstado {
+  id             Int       @id @default(autoincrement())
+  servicioId     Int       @map("servicio_id")
+  servicio       Servicio  @relation(fields: [servicioId], references: [id])
+  estadoAnterior String    @map("estado_anterior")
+  estadoNuevo    String    @map("estado_nuevo")
+  nota           String?
+  responsable    String
+  creadoEn       DateTime  @default(now()) @map("creado_en")
+
+  @@map("cambios_estado")
+}
+
+model Zona {
+  id           Int     @id @default(autoincrement())
+  nombre       String  @unique
+  departamento String
+  tarifas      Tarifa[]
+
+  @@map("zonas")
+}
+
+model Tarifa {
+  id            Int     @id @default(autoincrement())
+  zonaOrigenId  Int     @map("zona_origen_id")
+  zonaOrigen    Zona    @relation(fields: [zonaOrigenId], references: [id])
+  tipoServicio  String  @map("tipo_servicio")
+  precioBase    Float   @map("precio_base")
+  precioPorKg   Float   @map("precio_por_kg")
+  precioPorM3   Float?  @map("precio_por_m3")
+  vigente       Boolean @default(true)
+
+  @@map("tarifas")
+}
+
+model Factura {
+  id            Int           @id @default(autoincrement())
+  numero        String        @unique
+  servicioId    Int           @unique @map("servicio_id")
+  servicio      Servicio      @relation(fields: [servicioId], references: [id])
+  usuarioId     Int           @map("usuario_id")
+  usuario       Usuario       @relation(fields: [usuarioId], references: [id])
+  montoBase     Float         @map("monto_base")
+  impuestos     Float
+  total         Float
+  estado        EstadoFactura @default(PENDIENTE)
+  creadoEn      DateTime      @default(now()) @map("creado_en")
+  actualizadoEn DateTime      @updatedAt @map("actualizado_en")
+  pagos         Pago[]
+
+  @@map("facturas")
+}
+
+enum EstadoFactura {
+  PENDIENTE
+  PAGADA
+  VENCIDA
+  ANULADA
+}
+
+model Pago {
+  id            Int        @id @default(autoincrement())
+  facturaId     Int        @map("factura_id")
+  factura       Factura    @relation(fields: [facturaId], references: [id])
+  monto         Float
+  metodoPago    String     @map("metodo_pago")
+  referencia    String?   
+  estado        EstadoPago @default(COMPLETADO)
+  creadoEn      DateTime   @default(now()) @map("creado_en")
+
+  @@map("pagos")
+}
+
+enum EstadoPago {
+  PENDIENTE
+  COMPLETADO
+  FALLIDO
+  REEMBOLSADO
+}
+
+model Ticket {
+  id            Int             @id @default(autoincrement())
+  numero        String          @unique // TIC-2026-0001
+  usuarioId     Int
+  usuario       Usuario         @relation(fields: [usuarioId], references: [id])
+  asunto        String
+  descripcion   String
+  estado        EstadoTicket    @default(ABIERTO)
+  prioridad     PrioridadTicket @default(MEDIA)
+  creadoEn      DateTime        @default(now())
+  actualizadoEn DateTime        @updatedAt
+  mensajes      MensajeTicket[]
+}
+
+enum EstadoTicket {
+  ABIERTO
+  EN_PROCESO
+  RESUELTO
+  CERRADO
+}
+
+enum PrioridadTicket {
+  BAJA
+  MEDIA
+  ALTA
+}
+
+model MensajeTicket {
+  id          Int      @id @default(autoincrement())
+  ticketId    Int
+  ticket      Ticket   @relation(fields: [ticketId], references: [id])
+  usuarioId   Int
+  usuario     Usuario  @relation(fields: [usuarioId], references: [id])
+  mensaje     String
+  creadoEn    DateTime @default(now())
+}
+
+// ===== GPS TRACKING (RF03) =====
+
+model UbicacionGPS {
+  id          Int      @id @default(autoincrement())
+  servicioId  Int      @map("servicio_id")
+  servicio    Servicio @relation(fields: [servicioId], references: [id])
+  latitud     Float
+  longitud    Float
+  velocidad   Float?   // km/h
+  evento      String?  // RECOGIDO, EN_RUTA, PUNTO_CONTROL, ENTREGADO
+  direccion   String?  // Dirección legible
+  creadoEn    DateTime @default(now()) @map("creado_en")
+
+  @@map("ubicaciones_gps")
+  @@index([servicioId, creadoEn])
+}
+
+// ===== INVENTARIO Y BODEGAS (RF04, RF05) =====
+
+model Bodega {
+  id            Int       @id @default(autoincrement())
+  nombre        String    @unique
+  direccion     String
+  ciudad        String
+  tipo          TipoBodega @default(PROPIA)
+  capacidadM3   Float     @map("capacidad_m3")
+  ocupacionM3   Float     @default(0) @map("ocupacion_m3")
+  activa        Boolean   @default(true)
+  creadoEn      DateTime  @default(now()) @map("creado_en")
+  productos     Producto[]
+
+  @@map("bodegas")
+}
+
+enum TipoBodega {
+  PROPIA
+  CLIENTE
+  TERCERO
+}
+
+model Producto {
+  id              Int       @id @default(autoincrement())
+  sku             String    @unique
+  nombre          String
+  descripcion     String?
+  categoria       String?
+  unidadMedida    String    @default("unidad") @map("unidad_medida")
+  stockActual     Int       @default(0) @map("stock_actual")
+  stockMinimo     Int       @default(0) @map("stock_minimo")
+  stockMaximo     Int       @default(0) @map("stock_maximo")
+  precioUnitario  Float?    @map("precio_unitario")
+  bodegaId        Int       @map("bodega_id")
+  bodega          Bodega    @relation(fields: [bodegaId], references: [id])
+  clienteId       Int?      @map("cliente_id")
+  activo          Boolean   @default(true)
+  creadoEn        DateTime  @default(now()) @map("creado_en")
+  actualizadoEn   DateTime  @updatedAt @map("actualizado_en")
+  movimientos     MovimientoInventario[]
+
+  @@map("productos")
+  @@index([bodegaId])
+  @@index([sku])
+}
+
+model MovimientoInventario {
+  id            Int              @id @default(autoincrement())
+  productoId    Int              @map("producto_id")
+  producto      Producto         @relation(fields: [productoId], references: [id])
+  tipo          TipoMovimiento
+  cantidad      Int
+  stockAnterior Int              @map("stock_anterior")
+  stockNuevo    Int              @map("stock_nuevo")
+  referencia    String?          // Num. de guía, orden, etc.
+  nota          String?
+  responsable   String
+  creadoEn      DateTime         @default(now()) @map("creado_en")
+
+  @@map("movimientos_inventario")
+  @@index([productoId, creadoEn])
+}
+
+enum TipoMovimiento {
+  ENTRADA
+  SALIDA
+  TRANSFERENCIA
+  AJUSTE
+  DEVOLUCION
+}

@@ -1,0 +1,5 @@
+Admin found id=1 email=admin@logisticsworld.com rol=ADMIN
+Password Admin123! match: false
+Password admin123 match: true
+Password Admin1234! match: false
+Hash: $2b$12$0z8XOs5oeIo0O...

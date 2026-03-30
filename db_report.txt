@@ -1,0 +1,16 @@
+=== USUARIOS ===
+  ID:1 | admin@logisticsworld.com | ADMIN
+  ID:2 | operador@logisticsworld.com | OPERADOR
+  ID:3 | empresa@demo.com | CLIENTE_B2B
+  ID:4 | juan@correo.com | CLIENTE_B2C
+  ID:5 | tester@correo.com | CLIENTE_B2C
+  ID:6 | juan@empresa.com | CLIENTE_B2C
+  ID:7 | test_pay@demo.com | CLIENTE_B2C
+  ID:8 | ISABELLAHOT@GMAIL.COM | CLIENTE_B2C
+
+=== TOTALES ===
+  Cotizaciones: 11
+  Servicios: 6
+  Facturas: 2
+  Tickets: 1
+  Pagos: 0
