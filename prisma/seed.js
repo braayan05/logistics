@@ -93,6 +93,7 @@ async function main() {
   console.log('✅ Zonas creadas:', zonas.length);
 
   // Crear cotizaciones de ejemplo
+  try {
   const cotizaciones = await Promise.all([
     prisma.cotizacion.create({
       data: {
@@ -184,6 +185,13 @@ async function main() {
     ]
   });
   console.log('✅ Servicios y cambios de estado creados');
+  } catch (error) {
+    if (error.code === 'P2002') {
+      console.log('⚠️ Las cotizaciones y servicios de prueba ya existían en la base de datos. Se omitió su creación.');
+    } else {
+      throw error;
+    }
+  }
 
   console.log('\n🎉 Seed completado exitosamente!');
   console.log('\n📋 Credenciales de prueba:');
